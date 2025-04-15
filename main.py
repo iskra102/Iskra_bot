@@ -1,19 +1,25 @@
 import telebot
+from flask import Flask, request
+import os
 
-# Bot token
-TOKEN = '7503527452:AAGeEs1Xk0vAykJtIaxd42IkpWCjjS8qQM4'
+TOKEN = os.environ.get("TOKEN")  # Убедись, что в Render переменная называется "TOKEN"
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
-# Start command handler
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Hello! I'm Iskra, your assistant. Ready to help.")
+@bot.message_handler(commands=["start"])
+def start(message):
+    bot.send_message(message.chat.id, "Привет! Я Искра-бот, готов к службе.")
 
-# Echo any other message
-@bot.message_handler(func=lambda message: True)
-def echo_message(message):
-    bot.reply_to(message, f'You said: {message.text}')
+@app.route("/" + TOKEN, methods=["POST"])
+def getMessage():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
 
-# Run the bot
-if __name__ == '__main__':
-    bot.infinity_polling()
+@app.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https://iskra-bot.onrender.com/' + TOKEN)
+    return "Webhook set", 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
